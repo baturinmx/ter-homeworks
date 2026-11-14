@@ -1,25 +1,62 @@
-# Домашние задания по модулю «Облачная инфраструктура. Terraform»
+# Ответ к заданию «Введение в Terraform» - hw-01.md
 
-В этом репозитории расположены ваши домашние задания к каждой лекции. 
+### Задание 1
 
-Обязательными к выполнению являются задачи без указания звездочки. Их выполнение необходимо для получения зачета и диплома о профессиональной переподготовке.
+1. Ответ не требуется.
 
-Задачи со звездочкой (*) являются дополнительными задачами и/или задачами повышенной сложности. Они не являются обязательными к выполнению, но помогут вам глубже понять тему.
+2. Личную конфиденциальную информацию (логины, пароли, ключи, токены) согласно .gitignore допустимо хранить в файле personal.auto.tfvars
 
-Любые вопросы по решению задач задавайте в чате курса.
+3. c99VldfOVAF7MbKH
 
+4. В строке `resource "docker_image" {` пропущено имя. Правильные вариант: `resource "docker_image" "nginx" {`
 
-1. [Ввдение в Terraform](01/hw-01.md)
+В строке `resource "docker_container" "nginx" {` имя не должно начинаться с цифры. Правильный вариант: `resource "docker_container" "nginx" {`
 
-2. [Основы Terraform. Yandex Cloud](02/hw-02.md)
+В строке `name = "example_${random_password.random_string_FAKE.resulT}"` _FAKE является лишним, так как правильное имя ресурса - `random_string`.
+Также `resulT` является недопустимый именем атрибута `result`.
+Правильный ваирант: `name  = "example_${random_password.random_string.result}"`
 
-3. [Управляющие конструкции в коде Terraform](03/hw-03.md)
+5. Исправленный фрагмент кода:
+```
+resource "docker_image" "nginx" {
+  name         = "nginx:latest"
+  keep_locally = true
+}
 
-4. [Продвинутые методы работы с Terraform](04/hw-04.md)
+resource "docker_container" "nginx" {
+  image = docker_image.nginx.image_id
+  name  = "example_${random_password.random_string.result}"
 
-5. [Использование Terraform в команде](05/hw-05.md)
+  ports {
+    internal = 80
+    external = 9090
+  }
+}
+```
 
-6. [Введение в Terramate](06/hw-06.md)
+Вывод команды `docker ps`:
+```
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS                  NAMES
+0870de3f3f04   165ddde8751e   "/docker-entrypoint.…"   21 seconds ago   Up 20 seconds   0.0.0.0:9090->80/tcp   example_c99VldfOVAF7MbKH
+```
 
+6. Из-за ключа `-auto-approve` после изменения имени на hello_world мы не сможем среагировать на следующее предупреждение `# docker_container.nginx must be replaced` и удалим (заменим) старый контейнер, который, возможно, не хотели бы удалять. Опасность ключа заключается в том, что Terraform применяет изменения автоматически, без запроса подтверждения от пользователя, что при ошибке в конфигурации может привести к ошибке в работе инфраструкутуры или потере данных. Ключ `-auto-approve` используется для ситуаций, когда нет возможности ручного ввода (в скриптах, CI/CD-пайплайнах).
 
+7. Уничтожил ресурсы с помощью `terraform destroy`. Убедился, что ресурсы удалены с помощью `terraform state list`. Содержимоей файла terraform.tfstate: 
+```
+{
+  "version": 4,
+  "terraform_version": "1.12.2",
+  "serial": 11,
+  "lineage": "93d9036e-0dc5-b05d-b9be-26edccf8056d",
+  "outputs": {},
+  "resources": [],
+  "check_results": null
+}
+```
 
+8. Потому что к ресурсу с именем nginx:latest был применён параметр `keep_locally = true`, который указывает Terraform сохранить Docker-образ локально даже после выполнения terraform destroy.
+
+Строчка из документации, которая об этом рассказывает:
+
+keep_locally (Boolean) If true, then the Docker image won't be deleted on destroy operation. If this is false, it will delete the image from the docker local storage on destroy operation.
