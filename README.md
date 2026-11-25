@@ -164,4 +164,80 @@ variable "vm_db_zone" {
 #### Результат выполнения команды terraform output
 ![img4](img4.png)
 
+### Задание 5
 
+Содержимое файла locals.tf:
+```
+locals {
+  vm_web_name = "${var.vm_web_name}"
+  vm_db_name  = "${var.vm_db_name}"
+}
+```
+
+В main.tf в следующих блоках кода var.vm_..._name были изменены на local.vm_..._name
+```
+resource "yandex_compute_instance" "platform" {
+  name        = local.vm_web_name
+  platform_id = var.vm_web_platform_id
+...
+resource "yandex_compute_instance" "platform_db" {
+  name        = local.vm_db_name
+```
+
+### Задание 6
+
+1. Объединил три переменные vm_web_cores, vm_web_memory, vm_web_core_fraction и аналогичные переменные для DB в единую map-переменную vms_resources, создав её в файле vms_platform.tf и добавив следующий код:
+```
+variable "vms_resources" {
+  type = map(object({
+    cores         = number
+    memory        = number
+    core_fraction = number
+  }))
+
+  default = {
+    web = {
+      cores         = 2
+      memory        = 1
+      core_fraction = 5
+    }
+    db = {
+      cores         = 2
+      memory        = 2
+      core_fraction = 20
+    }
+  }
+}
+```
+
+2. Создал и использовал отдельную map-переменную metadata для блока метаданных, общую для обеих ВМ, в файле variables.tf, добавив следующий код:
+```
+variable "metadata" {
+  type = map(string)
+
+  default = {
+    serial-port-enable = "1"
+    ssh-keys           = "ubuntu:ssh-ed25519 AAAAC3Nza..."
+  }
+}
+```
+
+3. В файле main.tf заменил обращения к отдельным переменным ресурсов на обращения к элементам map-переменной vms_resources: 
+```
+resources {
+  cores         = var.vms_resources["web"].cores
+  memory        = var.vms_resources["web"].memory
+  core_fraction = var.vms_resources["web"].core_fraction
+}
+...
+resources {
+  cores         = var.vms_resources["db"].cores
+  memory        = var.vms_resources["db"].memory
+  core_fraction = var.vms_resources["db"].core_fraction
+}
+```
+Закомментировал все более не используемые переменные в файлах vms_platform.tf и variables.tf: vm_web_cores, vm_web_memory, vm_web_core_fraction, vm_db_cores, vm_db_memory, vm_db_core_fraction, vms_ssh_public_root_key
+
+4. Проверил конфигурацию с помощью команды terraform plan.
+
+`No changes. Your infrastructure matches the configuration.`
